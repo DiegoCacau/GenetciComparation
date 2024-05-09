@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
+#include <algorithm>
 
 // Função de fitness (maximização)
 double fitnessFunction(const std::vector<double> &predicted, const std::vector<double> &actual) {
@@ -25,6 +26,7 @@ const int POPULATION_SIZE = 100;
 const int NUM_GENERATIONS = 1000;
 const double MUTATION_RATE = 0.01;
 const int PARENTS_SIZE = 30;
+const int MUTATED_SIZE = 10;
 
 // Estrutura para representar um indivíduo
 struct Individual {
@@ -76,6 +78,19 @@ Individual findDifferentParent(const std::vector<Individual> &population, const 
     return parent;
 }
 
+Individual findElementNotIn(const std::vector<Individual> &population, 
+                               const std::vector<Individual>& notHere){
+    Individual element = population[rand() % population.size()];
+
+     
+
+    while(std::find(notHere.begin(), notHere.end(), element) != notHere.end()){
+        element = population[rand() % population.size()];
+    }
+
+    return element;
+}
+
 // Função de seleção de pais por torneio
 Individual tournamentSelection(const std::vector<Individual> &population, const Individual& other_parent) {
     const int TOURNAMENT_SIZE = 5;
@@ -125,13 +140,23 @@ void geneticAlgorithm(const std::vector<std::pair<double, double>> &domains) {
         std::vector<Individual> new_population;
         std::vector<Individual> parents = findParents(population, PARENTS_SIZE);
 
-        for (int i = 0; i < POPULATION_SIZE; ++i) {
+        new_population.insert(new_population.end(), parents.begin(), parents.end());
+
+        for (int i = 0; i < POPULATION_SIZE - PARENTS_SIZE - MUTATED_SIZE; ++i) {
             Individual parent1 = tournamentSelection(parents);
             Individual parent2 = tournamentSelection(parents);
             Individual offspring = crossover(parent1, parent2);
-            mutate(offspring, domains);
+
             new_population.push_back(offspring);
         }
+
+        for (int i = 0; i < MUTATED_SIZE; ++i) {
+            Individual element = findElementNotIn(population, parents);
+
+            mutate(element, domains);
+            new_population.push_back(element);
+        }
+
 
         population = new_population;
     }
