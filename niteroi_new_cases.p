@@ -15,10 +15,10 @@ set timefmt "%Y-%m-%d"
 
 set format x "%m/%y" 
 set xtics "2020-02-25", 4*2628000, "2022-12-30"
-#set yrange [ 0 : 25000 ]
+set yrange [ 0 : 130 ]
 
 set datafile separator ','
-plot "niteroi_new_cases.csv" using 2:6 with lines title "Infectados"
+plot "niteroi_new_cases.csv" using 2:5 with lines title "Infectados"
 
 set terminal pngcairo
 set output 'niteroi_new_cases.png'
