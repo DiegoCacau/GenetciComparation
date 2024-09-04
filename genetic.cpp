@@ -2,17 +2,19 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
+#include <string> 
 #include <cmath>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <omp.h>
 
 
 // Definição de parâmetros do algoritmo genético
-const int POPULATION_SIZE = 15;
-const int NUM_GENERATIONS = 10;
+const int POPULATION_SIZE = 24;
+const int NUM_GENERATIONS = 12;
 const double MUTATION_RATE = 0.4;
-const int PARENTS_SIZE = 5;
+const int PARENTS_SIZE = 6;
 const int MUTATED_SIZE = 3;
 const double MAX_FITNESS = 999999.9;
 
@@ -26,7 +28,9 @@ inline bool operator== (const Individual &a, const Individual &b) {
       return (a.params[0] == b.params[0]) 
          && (a.params[1] == b.params[1])
          && (a.params[2] == b.params[2])
-         && (a.params[3] == b.params[3]);
+         && (a.params[3] == b.params[3])
+         && (a.params[4] == b.params[4])
+         && (a.params[5] == b.params[5]);
 }
 
 void parserCSV(std::string file, std::vector<int>& values){
@@ -51,7 +55,8 @@ void parserCSV(std::string file, std::vector<int>& values){
 
 // Função de fitness (maximização)
 double fitnessFunction(const std::vector<int> &predicted, const std::vector<int> &actual) {
-    int size = 3;
+    int size = 33;
+    std::cout<< predicted.size() << "   " << actual.size() << "\n";
     if (predicted.size() != actual.size() &&
         predicted.size() != size ) {
         std::cerr << "Erro: As dimensões dos vetores são diferentes." << std::endl;
@@ -96,27 +101,57 @@ std::vector<Individual> findParents(const std::vector<Individual> &population, c
 
 // Função para avaliar o fitness de cada indivíduo na população
 void calculateFitness(std::vector<Individual> &population, std::vector<int>& expected_values) {
-    for (auto &individual : population) {
+    
 
-        std::ostringstream strs;
-        strs << individual.params[0] << " ";
-        strs << individual.params[1] << " ";
-        strs << individual.params[2] << " ";
-        strs << individual.params[3];
+
+    #pragma omp parallel for shared(population, expected_values)
+    for(int i=0; i<population.size(); i++) {
+    // for (auto &individual : population) {
+            Individual individual = population[i];
+
+            int id = rand() % 99999;
+            std::string folder = "/home/diegocacau/Documents/TCC/Codigo/Resultados/";
+
+            std::ostringstream strs;
+            strs << individual.params[0] << " ";
+            strs << individual.params[1] << " ";
+            strs << individual.params[2] << " ";
+            strs << individual.params[3] << " ";
+            strs << individual.params[4] << " ";
+            strs << individual.params[5] << " ";
+            strs << std::to_string(id) << " ";
+            strs << folder;
+            
+            std::string values = "cd /home/diegocacau/Documents/TCC/Codigo && ./run_genetic_comparation.sh " + strs.str();
+
+            std::cout << values << "\n\n\n";
+
+            std::system(values.c_str());
+
+            std::vector<int> actual_values {};
+            parserCSV(folder + "geneticFile" + std::to_string(id) + ".csv", actual_values);
+
+            population[i].fitness = fitnessFunction(actual_values, expected_values);
+
+            std::cout << "Individual fitness: " << population[i].fitness << "\n\n\n";
         
-        std::string values = "cd /home/diegocacau/Documents/TCC/Codigo && ./run_genetic_comparation.sh " + strs.str();
-
-        std::cout << values << "\n\n\n";
-
-        std::system(values.c_str());
-
-        std::vector<int> actual_values {};
-        parserCSV("/home/diegocacau/Documents/TCC/Codigo/deathAccumulated.csv", actual_values);
-
-        individual.fitness = fitnessFunction(actual_values, expected_values);
-
-        std::cout << "Individual fitness: " << individual.fitness << "\n\n\n";
     }
+
+
+    // for(int i=0; i<population.size(); i++) {
+
+    //     std::ostringstream strs;
+    //     strs << population[i].params[0] << " ";
+    //     strs << population[i].params[1] << " ";
+    //     strs << population[i].params[2] << " ";
+    //     strs << population[i].params[3] << " ";
+    //     strs << population[i].params[4] << " ";
+    //     strs << population[i].params[5] << " ";
+    //     strs << population[i].fitness << " ";
+
+    //     std::cout << strs.str() << "\n";
+    // }    
+    
 }
 
 Individual findDifferentParent(const std::vector<Individual> &population, const Individual& other_parent){
@@ -126,7 +161,9 @@ Individual findDifferentParent(const std::vector<Individual> &population, const 
     while((other_parent.params[0] == parent.params[0]) 
          && (other_parent.params[1] == parent.params[1])
          && (other_parent.params[2] == parent.params[2])
-         && (other_parent.params[3] == parent.params[3]) ){
+         && (other_parent.params[3] == parent.params[3])
+         && (other_parent.params[4] == parent.params[4])
+         && (other_parent.params[5] == parent.params[5]) ){
         
         parent = population[rand() % population.size()];
         i++;
@@ -204,10 +241,14 @@ void geneticAlgorithm(const std::vector<std::pair<double, double>> &domains) {
 
     std::vector<int> expected_values {};
     //std::string file = "/home/diegocacau/Documents/TCC/Comparacao/GenetciComparation/infectados_araruama.csv";
-    std::string file = "/home/diegocacau/Documents/TCC/Comparacao/GenetciComparation/mortos_italia.csv";
+    std::string file = "/home/diegocacau/Documents/TCC/Comparacao/GenetciComparation/infectados_61_115.csv";
     parserCSV(file, expected_values);
 
     std::cout << "Entrando no for \n";
+
+    
+
+    
     for (int generation = 0; generation < NUM_GENERATIONS; ++generation) {
 
         std::cout << "calculateFitness\n";
@@ -222,6 +263,8 @@ void geneticAlgorithm(const std::vector<std::pair<double, double>> &domains) {
         for (int i = 0; i < POPULATION_SIZE - PARENTS_SIZE - MUTATED_SIZE; ++i) {
             Individual dummy;
             dummy.fitness = MAX_FITNESS;
+            dummy.params.push_back(0);
+            dummy.params.push_back(0);
             dummy.params.push_back(0);
             dummy.params.push_back(0);
             dummy.params.push_back(0);
@@ -247,6 +290,9 @@ void geneticAlgorithm(const std::vector<std::pair<double, double>> &domains) {
         population = new_population;
     }
 
+    
+    
+
     // Após o número de gerações especificado, exibe o melhor indivíduo
     Individual best_individual = population[0];
     for (const auto &individual : population) {
@@ -266,11 +312,18 @@ void geneticAlgorithm(const std::vector<std::pair<double, double>> &domains) {
 int main() {
     srand(static_cast<unsigned int>(time(nullptr))); // Seed do gerador de números aleatórios
 
+
+    std::cout << "POPULATION_SIZE: " << POPULATION_SIZE << std::endl;
+    std::cout << "NUM_GENERATIONS: " << NUM_GENERATIONS << std::endl;
+
     // Definição dos domínios para cada parâmetro
     std::vector<std::pair<double, double>> domains = {
-                                    {0.001, 0.05}, // letalidade doenca
-                                    {0.001, 1.5}, // constante de infecção
-                                    {0.05, 0.30}, // probabilidade de recuperacao
+                                    {0.001, 0.01}, // letalidade doenca
+                                    {1, 5}, // constante de infecção
+                                    {0.01, 0.30}, // probabilidade de recuperacao
+                                    {0.01, 0.30}, // probabilidade de exposto tornar infecioso
+                                    {1, 40}, // Infectados inicialmente
+                                    {5, 1000}, // Expostos inicialmente
                                     //{0.05, 0.30}, // letalidade da populacao nao relacionada a doenca
                                     }; 
     geneticAlgorithm(domains); // Execução do algoritmo genético
